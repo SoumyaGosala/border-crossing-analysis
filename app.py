@@ -102,7 +102,7 @@ def update_pie_chart(selected_measure):
     return fig
 
 # Static Heatmap
-fig_heatmap = px.imshow(numeric_df.corr(), color_continuous_scale='coolwarm', title='Correlation Matrix', template='plotly_white')
+fig_heatmap = px.imshow(numeric_df.corr(), color_continuous_scale='viridis', title='Correlation Matrix', template='plotly_white')
 
 @app.callback(
     Output('static-heatmap', 'figure'),
