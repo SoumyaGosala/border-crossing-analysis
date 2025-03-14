@@ -31,6 +31,9 @@ print("Missing values in each column:\n", missing_values)
 # Summary statistics
 print(df.describe())
 
+# Filter only numeric columns for correlation analysis
+numeric_df = df.select_dtypes(include=[np.number])
+
 # Initialize Dash App with external stylesheet for better UI
 theme = "https://codepen.io/chriddyp/pen/bWLwgP.css"
 app = dash.Dash(__name__, external_stylesheets=[theme])
@@ -46,24 +49,32 @@ app.layout = html.Div([
             id='measure-dropdown',
             options=[{'label': m, 'value': m} for m in df['Measure'].unique()],
             value=df['Measure'].unique()[0],
-            style={'width': '50%', 'margin': 'auto'}
+            style={'width': '40%', 'margin': 'auto', 'display': 'inline-block'}
+        ),
+        html.Label("Select Date Range:", style={'fontSize': '18px', 'fontWeight': 'bold', 'marginLeft': '20px'}),
+        dcc.DatePickerRange(
+            id='date-picker',
+            start_date=df['Date'].min(),
+            end_date=df['Date'].max(),
+            display_format='YYYY-MM-DD',
+            style={'display': 'inline-block', 'marginLeft': '10px'}
         )
     ], style={'textAlign': 'center', 'padding': '20px'}),
     
     html.Div([
         dcc.Graph(id='measure-bar-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
         dcc.Graph(id='time-series-plot', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='top-ports', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='correlation-heatmap', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
+        dcc.Graph(id='interactive-pie-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
+        dcc.Graph(id='static-heatmap', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
     ], style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'padding': '20px'})
 ])
 
 @app.callback(
     Output('measure-bar-chart', 'figure'),
-    Input('measure-dropdown', 'value')
+    [Input('measure-dropdown', 'value'), Input('date-picker', 'start_date'), Input('date-picker', 'end_date')]
 )
-def update_bar_chart(selected_measure):
-    filtered_df = df[df['Measure'] == selected_measure]
+def update_bar_chart(selected_measure, start_date, end_date):
+    filtered_df = df[(df['Measure'] == selected_measure) & (df['Date'] >= start_date) & (df['Date'] <= end_date)]
     fig = px.bar(filtered_df.groupby('State')['Value'].sum().reset_index(), x='Value', y='State',
                  title=f'Total Border Crossings for {selected_measure}', orientation='h',
                  color='State', color_continuous_scale='viridis', template='plotly_white')
@@ -71,38 +82,41 @@ def update_bar_chart(selected_measure):
 
 @app.callback(
     Output('time-series-plot', 'figure'),
-    Input('measure-dropdown', 'value')
+    [Input('measure-dropdown', 'value'), Input('date-picker', 'start_date'), Input('date-picker', 'end_date')]
 )
-def update_time_series(selected_measure):
-    filtered_df = df[df['Measure'] == selected_measure]
+def update_time_series(selected_measure, start_date, end_date):
+    filtered_df = df[(df['Measure'] == selected_measure) & (df['Date'] >= start_date) & (df['Date'] <= end_date)]
     fig = px.line(filtered_df, x='Date', y='Value', color='Border',
                   title=f'Time Series Analysis of {selected_measure}',
                   markers=True, template='plotly_white')
     return fig
 
 @app.callback(
-    Output('top-ports', 'figure'),
+    Output('interactive-pie-chart', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_top_ports(selected_measure):
-    top_ports_df = df.groupby('Port Name')['Value'].sum().nlargest(5).reset_index()
-    fig = px.bar(top_ports_df, x='Value', y='Port Name',
-                 title='Top 5 Border Crossing Ports', orientation='h', template='plotly_white')
+def update_pie_chart(selected_measure):
+    filtered_df = df[df['Measure'] == selected_measure]
+    fig = px.pie(filtered_df, names='State', values='Value',
+                 title=f'Border Crossings by State for {selected_measure}', hole=0.3, template='plotly_white')
     return fig
 
+# Static Heatmap
+fig_heatmap = px.imshow(numeric_df.corr(), color_continuous_scale='coolwarm', title='Correlation Matrix', template='plotly_white')
+
 @app.callback(
-    Output('correlation-heatmap', 'figure'),
+    Output('static-heatmap', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_correlation_heatmap(selected_measure):
-    fig = px.imshow(df.corr(numeric_only=True), color_continuous_scale='coolwarm', title='Correlation Matrix', template='plotly_white')
-    return fig
+def update_static_heatmap(selected_measure):
+    return fig_heatmap
 
 # Expose the Flask server for Gunicorn
 server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
 
 
 
