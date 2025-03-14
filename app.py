@@ -90,6 +90,12 @@ def update_geospatial(selected_measure):
                             title=f'Geospatial Analysis for {selected_measure}')
     return fig
 
+# Expose the Flask server for Gunicorn
+server = app.server
+
+if __name__ != "__main__":
+    gunicorn_app = server
+
 if __name__ == '__main__':
     app.run_server(debug=True)
 
