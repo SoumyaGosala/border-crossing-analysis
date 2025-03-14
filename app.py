@@ -69,7 +69,7 @@ app.layout = html.Div([
     # Graph 5 & Graph 6 side by side
     html.Div([
         dcc.Graph(id='correlation-heatmap'),
-        dcc.Graph(id='state-year-crossings')
+        dcc.Graph(id='port-border-analysis')
     ], style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'padding': '20px'})
 ])
 
@@ -121,18 +121,19 @@ def update_time_series(selected_measure):
 )
 def update_correlation_heatmap(selected_measure):
     fig = px.imshow(numeric_df.corr(), color_continuous_scale='viridis',
-                    title='Correlation Matrix', template='plotly_white')
+                    title='Correlation Matrix', template='plotly_white',
+                    text_auto=True)
     return fig
 
 @app.callback(
-    Output('state-year-crossings', 'figure'),
+    Output('port-border-analysis', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_total_crossings_state(selected_measure):
+def update_port_border_analysis(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
-    fig = px.bar(filtered_df.groupby(['State', 'Year'])['Value'].sum().reset_index(), x='State', y='Value',
-                 color='Year', title=f'Total Border Crossings by State and Year', template='plotly_white',
-                 color_continuous_scale='plasma', barmode='stack')
+    fig = px.scatter(filtered_df, x='Port Name', y='Value', color='Border',
+                     title=f'Border Crossings by Port and Border Type',
+                     template='plotly_white', size='Value')
     return fig
 
 # Expose the Flask server for Gunicorn
