@@ -3,7 +3,6 @@
 
 # In[1]:
 
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -53,13 +52,10 @@ app.layout = html.Div([
     
     html.Div([
         dcc.Graph(id='measure-bar-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='entries-by-border', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
-    ], style={'display': 'flex', 'flexWrap': 'wrap', 'justifyContent': 'space-around'}),
-    
-    html.Div([
+        dcc.Graph(id='entries-by-border', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
         dcc.Graph(id='top-ports', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
         dcc.Graph(id='monthly-trends', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
-    ], style={'display': 'flex', 'flexWrap': 'wrap', 'justifyContent': 'space-around', 'padding': '20px'})
+    ], style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'padding': '20px'})
 ])
 
 @app.callback(
@@ -108,7 +104,6 @@ server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
-
 
 
 # In[ ]:
