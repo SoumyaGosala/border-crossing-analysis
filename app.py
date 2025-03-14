@@ -52,8 +52,8 @@ app.layout = html.Div([
 
     # Graph 1 & Graph 2 side by side
     html.Div([
-        dcc.Graph(id='measure-bar-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='dynamic-pie-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
+        dcc.Graph(id='measure-bar-chart'),
+        dcc.Graph(id='dynamic-pie-chart')
     ], style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'padding': '20px'}),
 
     # Graph 3: Monthly Trends
@@ -61,15 +61,15 @@ app.layout = html.Div([
         dcc.Graph(id='monthly-trends')
     ], style={'padding': '20px'}),
 
-    # Graph 4: Time Series Trends
+    # Graph 4: Time Series Trends (Smoothed)
     html.Div([
         dcc.Graph(id='time-series-trend')
     ], style={'padding': '20px'}),
 
     # Graph 5 & Graph 6 side by side
     html.Div([
-        dcc.Graph(id='correlation-heatmap', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='total-crossings-state', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
+        dcc.Graph(id='correlation-heatmap'),
+        dcc.Graph(id='state-year-crossings')
     ], style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'padding': '20px'})
 ])
 
@@ -81,7 +81,7 @@ def update_bar_chart(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
     fig = px.bar(filtered_df.groupby('State')['Value'].sum().reset_index(), x='Value', y='State',
                  title=f'Total Border Crossings for {selected_measure}', orientation='h',
-                 color='State', color_continuous_scale='viridis', template='plotly_white')
+                 color='State', color_continuous_scale='blues', template='plotly_white')
     return fig
 
 @app.callback(
@@ -90,7 +90,8 @@ def update_bar_chart(selected_measure):
 )
 def update_pie_chart(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
-    fig = px.pie(filtered_df, names='State', values='Value', title=f'{selected_measure} Distribution by State')
+    fig = px.pie(filtered_df, names='State', values='Value', title=f'{selected_measure} Distribution by State',
+                 hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
     return fig
 
 @app.callback(
@@ -100,7 +101,7 @@ def update_pie_chart(selected_measure):
 def update_monthly_trends(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure].groupby(['Month', 'Year'])['Value'].sum().reset_index()
     fig = px.line(filtered_df, x='Month', y='Value', color='Year', title=f'Monthly Trends for {selected_measure}',
-                  template='plotly_white')
+                  template='plotly_white', markers=True)
     return fig
 
 @app.callback(
@@ -108,9 +109,10 @@ def update_monthly_trends(selected_measure):
     Input('measure-dropdown', 'value')
 )
 def update_time_series(selected_measure):
-    filtered_df = df[df['Measure'] == selected_measure]
-    fig = px.line(filtered_df, x='Date', y='Value', title=f'Trend of Border Crossings Over Time for {selected_measure}',
-                  template='plotly_white')
+    filtered_df = df[df['Measure'] == selected_measure].groupby('Date')['Value'].sum().reset_index()
+    filtered_df['Smoothed_Value'] = filtered_df['Value'].rolling(window=6, min_periods=1).mean()
+    fig = px.line(filtered_df, x='Date', y='Smoothed_Value', title=f'Trend of Border Crossings Over Time for {selected_measure}',
+                  template='plotly_white', markers=True)
     return fig
 
 @app.callback(
@@ -123,13 +125,14 @@ def update_correlation_heatmap(selected_measure):
     return fig
 
 @app.callback(
-    Output('total-crossings-state', 'figure'),
+    Output('state-year-crossings', 'figure'),
     Input('measure-dropdown', 'value')
 )
 def update_total_crossings_state(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
-    fig = px.bar(filtered_df.groupby('State')['Value'].sum().reset_index(), x='State', y='Value',
-                 title=f'Total Crossings by State for {selected_measure}', template='plotly_white')
+    fig = px.bar(filtered_df.groupby(['State', 'Year'])['Value'].sum().reset_index(), x='State', y='Value',
+                 color='Year', title=f'Total Border Crossings by State and Year', template='plotly_white',
+                 color_continuous_scale='plasma', barmode='stack')
     return fig
 
 # Expose the Flask server for Gunicorn
@@ -137,7 +140,6 @@ server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
-
 
 
 # In[ ]:
