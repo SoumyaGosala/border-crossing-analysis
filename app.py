@@ -52,9 +52,9 @@ app.layout = html.Div([
     
     html.Div([
         dcc.Graph(id='measure-bar-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='entries-by-border', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
+        dcc.Graph(id='time-series-plot', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
         dcc.Graph(id='top-ports', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='monthly-trends', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
+        dcc.Graph(id='correlation-heatmap', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
     ], style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'padding': '20px'})
 ])
 
@@ -70,12 +70,14 @@ def update_bar_chart(selected_measure):
     return fig
 
 @app.callback(
-    Output('entries-by-border', 'figure'),
+    Output('time-series-plot', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_entries_by_border(selected_measure):
-    fig = px.bar(df.groupby('Border')['Value'].sum().reset_index(), x='Border', y='Value',
-                 title='Entries by Border Type', color='Border', template='plotly_white')
+def update_time_series(selected_measure):
+    filtered_df = df[df['Measure'] == selected_measure]
+    fig = px.line(filtered_df, x='Date', y='Value', color='Border',
+                  title=f'Time Series Analysis of {selected_measure}',
+                  markers=True, template='plotly_white')
     return fig
 
 @app.callback(
@@ -89,14 +91,11 @@ def update_top_ports(selected_measure):
     return fig
 
 @app.callback(
-    Output('monthly-trends', 'figure'),
+    Output('correlation-heatmap', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_monthly_trends(selected_measure):
-    df['Month'] = df['Date'].dt.month_name()
-    df_monthly = df.groupby('Month')['Value'].sum().reset_index()
-    fig = px.bar(df_monthly, x='Month', y='Value',
-                 title='Monthly Trends in Border Crossings', template='plotly_white')
+def update_correlation_heatmap(selected_measure):
+    fig = px.imshow(df.corr(numeric_only=True), color_continuous_scale='coolwarm', title='Correlation Matrix', template='plotly_white')
     return fig
 
 # Expose the Flask server for Gunicorn
@@ -104,6 +103,7 @@ server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
 
 
 # In[ ]:
