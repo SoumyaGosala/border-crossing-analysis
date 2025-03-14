@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
 import warnings
-import plotly.graph_objects as go
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
@@ -54,12 +53,12 @@ app.layout = html.Div([
     
     html.Div([
         dcc.Graph(id='measure-bar-chart', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='time-series-plot', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
+        dcc.Graph(id='entries-by-border', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'justifyContent': 'space-around'}),
     
     html.Div([
-        dcc.Graph(id='heatmap-correlation', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
-        dcc.Graph(id='geospatial-plot', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
+        dcc.Graph(id='top-ports', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'}),
+        dcc.Graph(id='monthly-trends', style={'border': '1px solid #ddd', 'borderRadius': '10px', 'padding': '10px'})
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'justifyContent': 'space-around', 'padding': '20px'})
 ])
 
@@ -75,33 +74,33 @@ def update_bar_chart(selected_measure):
     return fig
 
 @app.callback(
-    Output('time-series-plot', 'figure'),
+    Output('entries-by-border', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_time_series(selected_measure):
-    filtered_df = df[df['Measure'] == selected_measure]
-    fig = px.line(filtered_df, x='Date', y='Value', color='Border',
-                  title=f'Time Series Analysis of {selected_measure}',
-                  markers=True, template='plotly_white')
+def update_entries_by_border(selected_measure):
+    fig = px.bar(df.groupby('Border')['Value'].sum().reset_index(), x='Border', y='Value',
+                 title='Entries by Border Type', color='Border', template='plotly_white')
     return fig
 
 @app.callback(
-    Output('heatmap-correlation', 'figure'),
+    Output('top-ports', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_heatmap(selected_measure):
-    fig = px.imshow(df.corr(numeric_only=True), color_continuous_scale='coolwarm', title='Correlation Matrix', template='plotly_white')
+def update_top_ports(selected_measure):
+    top_ports_df = df.groupby('Port Name')['Value'].sum().nlargest(5).reset_index()
+    fig = px.bar(top_ports_df, x='Value', y='Port Name',
+                 title='Top 5 Border Crossing Ports', orientation='h', template='plotly_white')
     return fig
 
 @app.callback(
-    Output('geospatial-plot', 'figure'),
+    Output('monthly-trends', 'figure'),
     Input('measure-dropdown', 'value')
 )
-def update_geospatial(selected_measure):
-    filtered_df = df[df['Measure'] == selected_measure]
-    fig = px.scatter_mapbox(filtered_df, lat='Latitude', lon='Longitude', size='Value', color='Border',
-                            hover_name='Port Name', zoom=3, mapbox_style="carto-positron",
-                            title=f'Geospatial Analysis for {selected_measure}', template='plotly_white')
+def update_monthly_trends(selected_measure):
+    df['Month'] = df['Date'].dt.month_name()
+    df_monthly = df.groupby('Month')['Value'].sum().reset_index()
+    fig = px.bar(df_monthly, x='Month', y='Value',
+                 title='Monthly Trends in Border Crossings', template='plotly_white')
     return fig
 
 # Expose the Flask server for Gunicorn
@@ -109,6 +108,7 @@ server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
 
 
 # In[ ]:
