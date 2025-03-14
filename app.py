@@ -81,7 +81,8 @@ def update_bar_chart(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
     fig = px.bar(filtered_df.groupby('State')['Value'].sum().reset_index(), x='Value', y='State',
                  title=f'Total Border Crossings for {selected_measure}', orientation='h',
-                 color='State', color_continuous_scale='blues', template='plotly_white')
+                 color='State', color_continuous_scale='blues', template='plotly_white',
+                 labels={'Value': 'Total Crossings', 'State': 'State'})
     return fig
 
 @app.callback(
@@ -91,7 +92,8 @@ def update_bar_chart(selected_measure):
 def update_pie_chart(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
     fig = px.pie(filtered_df, names='State', values='Value', title=f'{selected_measure} Distribution by State',
-                 hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+                 hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel,
+                 labels={'Value': 'Number of Crossings', 'State': 'State'})
     return fig
 
 @app.callback(
@@ -101,7 +103,8 @@ def update_pie_chart(selected_measure):
 def update_monthly_trends(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure].groupby(['Month', 'Year'])['Value'].sum().reset_index()
     fig = px.line(filtered_df, x='Month', y='Value', color='Year', title=f'Monthly Trends for {selected_measure}',
-                  template='plotly_white', markers=True)
+                  template='plotly_white', markers=True,
+                  labels={'Value': 'Total Crossings', 'Month': 'Month'})
     return fig
 
 @app.callback(
@@ -112,7 +115,8 @@ def update_time_series(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure].groupby('Date')['Value'].sum().reset_index()
     filtered_df['Smoothed_Value'] = filtered_df['Value'].rolling(window=6, min_periods=1).mean()
     fig = px.line(filtered_df, x='Date', y='Smoothed_Value', title=f'Trend of Border Crossings Over Time for {selected_measure}',
-                  template='plotly_white', markers=True)
+                  template='plotly_white', markers=True,
+                  labels={'Smoothed_Value': 'Smoothed Crossings', 'Date': 'Date'})
     return fig
 
 @app.callback(
@@ -120,9 +124,9 @@ def update_time_series(selected_measure):
     Input('measure-dropdown', 'value')
 )
 def update_correlation_heatmap(selected_measure):
-    fig = px.imshow(numeric_df.corr(), color_continuous_scale='viridis',
+    fig = px.imshow(numeric_df.corr().round(3), color_continuous_scale='viridis',
                     title='Correlation Matrix', template='plotly_white',
-                    text_auto=True)
+                    text_auto=True, labels={'color': 'Correlation Coefficient'})
     return fig
 
 @app.callback(
@@ -133,7 +137,8 @@ def update_port_border_analysis(selected_measure):
     filtered_df = df[df['Measure'] == selected_measure]
     fig = px.scatter(filtered_df, x='Port Name', y='Value', color='Border',
                      title=f'Border Crossings by Port and Border Type',
-                     template='plotly_white', size='Value')
+                     template='plotly_white', size='Value',
+                     labels={'Value': 'Total Crossings', 'Port Name': 'Port'})
     return fig
 
 # Expose the Flask server for Gunicorn
@@ -141,6 +146,7 @@ server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
 
 
 # In[ ]:
